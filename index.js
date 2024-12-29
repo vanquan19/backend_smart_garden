@@ -14,12 +14,15 @@ const io = new Server(server, {
 app.use(cors());
 
 // Connect to MongoDB
-mongoose.connect("mongodb+srv://itquankma:lqbWKgazyPJNK5vv@cluster0.tr9ng.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0smart_garden");
-const db = mongoose.connection;
-db.on("error", console.error.bind(console, "connection error:"));
-db.once("open", function () {
-    console.log("Connected to MongoDB");
-});
+const connectDB = async () => {
+    try {
+        await mongoose.connect("mongodb+srv://itquankma:lqbWKgazyPJNK5vv@cluster0.tr9ng.mongodb.net/smart_garden?retryWrites=true&w=majority&appName=Cluster0");
+        console.log("MongoDB is connected");
+    } catch (err) {
+        console.log(err);
+    }
+};
+connectDB();
 
 // Start server
 server.listen(3005, () => {
@@ -27,19 +30,25 @@ server.listen(3005, () => {
 });
 
 // Define schema device and sensor
-const deviceSchema = new mongoose.Schema({
-    light: Boolean,
-    auto: Boolean,
-    watering: Boolean,
-    heating: Boolean,
-});
+const deviceSchema = new mongoose.Schema(
+    {
+        light: Boolean,
+        auto: Boolean,
+        watering: Boolean,
+        heating: Boolean,
+    },
+    { collection: "controls" }
+);
 
-const sensorSchema = new mongoose.Schema({
-    result: Array,
-});
+const sensorSchema = new mongoose.Schema(
+    {
+        result: Array,
+    },
+    { collection: "sensors" }
+);
 
 // Create model device and sensor
-const Device = mongoose.model("control", deviceSchema);
+const DeviceModal = mongoose.model("coltrol", deviceSchema);
 const Sensor = mongoose.model("sensor", sensorSchema);
 
 // Get state control device
