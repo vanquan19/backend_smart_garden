@@ -88,6 +88,12 @@ app.post("/control", (req, res) => {
         });
 });
 
+// Get sensor data
+app.post("/sensor", (req, res) => {
+    const data = req.body;
+    console.log(data);
+});
+
 // connect to socket
 io.on("connection", (socket) => {
     console.log("a user connected");
