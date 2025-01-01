@@ -42,9 +42,15 @@ const deviceSchema = new mongoose.Schema(
     { collection: "controls" }
 );
 
+const sensorDataSchema = new mongoose.Schema({
+    total: { type: Number, required: true },
+    timestame: { type: Date, required: true },
+});
+
 const sensorSchema = new mongoose.Schema(
     {
-        result: Array,
+        name: { type: String, required: true },
+        data: { type: [sensorDataSchema], required: true },
     },
     { collection: "sensors" }
 );
@@ -54,20 +60,36 @@ const DeviceModal = mongoose.model("coltrol", deviceSchema);
 const Sensor = mongoose.model("sensor", sensorSchema);
 //
 app.get("/", (req, res) => {
-    res.status(200).json("Hello World");
+    io.on("connection", (socket) => {
+        console.log("a user connected");
+        socket.on("disconnect", () => {
+            console.log("user disconnected");
+        });
+    });
+    return res.status(200).json("Hello ESP32 IOT Smart Garden.");
 });
 
 // Get state control device
-app.get("/control", (req, res) => {
-    const { devide } = req.query;
-    const objFind = {};
-    DeviceModal.find(objFind)
-        .then((data) => {
-            res.status(200).json(data);
-        })
-        .catch((err) => {
-            res.status(500).json({ error: err.message });
-        });
+app.get("/control", async (req, res) => {
+    const { device } = req.query;
+    try {
+        if (!device) {
+            const data = await DeviceModal.find({});
+            console.log(data);
+
+            return res.status(200).json({ data });
+        }
+        const deviceData = await DeviceModal.findOne({ name: device });
+
+        if (!deviceData) {
+            return res.status(404).json({ error: "Device not found" });
+        }
+
+        // Trả về trạng thái của thiết bị
+        res.status(200).json({ [device]: deviceData.state });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
 });
 
 // Update state control device
@@ -87,11 +109,111 @@ app.post("/control", (req, res) => {
             res.status(500).json({ error: err.message });
         });
 });
+// Get list temperature
+app.get("/temperature", async (req, res) => {
+    let { limit, page } = req.query;
+    try {
+        if (limit && page) {
+            page = +page - 1;
+            const total = await Sensor.findOne({ name: "temperature" }).select("data").countDocuments();
+            const data = await Sensor.findOne({ name: "temperature" })
+                .select("data")
+                .limit(+limit)
+                .skip(page * +limit);
+            return res.status(200).json({
+                totalPage: Math.ceil(total / limit),
+                data: data.data,
+                message: "Lây dữ liệu thành công",
+            });
+        }
+        const data = await Sensor.findOne({ name: "temperature" }).select("data");
+        return res.status(200).json({ data: data.data, message: "Lấy dữ liệu thành công" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+// Get list humidity
+app.get("/humidity", async (req, res) => {
+    let { limit, page } = req.query;
+    try {
+        if (limit && page) {
+            page = +page - 1;
+            const total = await Sensor.findOne({ name: "humidity" }).select("data").countDocuments();
+            const data = await Sensor.findOne({ name: "humidity" })
+                .select("data")
+                .limit(+limit)
+                .skip(page * +limit);
+            return res.status(200).json({
+                totalPage: Math.ceil(total / limit),
+                data: data.data,
+                message: "Lây dữ liệu thành công",
+            });
+        }
+        const data = await Sensor.findOne({ name: "humidity" }).select("data");
+        return res.status(200).json({ data: data.data, message: "Lấy dữ liệu thành công" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+// Get list ldr
+app.get("/ldr", async (req, res) => {
+    let { limit, page } = req.query;
+    try {
+        if (limit && page) {
+            page = +page - 1;
+            const total = await Sensor.findOne({ name: "ldr" }).select("data").countDocuments();
+            const data = await Sensor.findOne({ name: "ldr" })
+                .select("data")
+                .limit(+limit)
+                .skip(page * +limit);
+            return res.status(200).json({
+                totalPage: Math.ceil(total / limit),
+                data: data.data,
+                message: "Lây dữ liệu thành công",
+            });
+        }
+        const data = await Sensor.findOne({ name: "ldr" }).select("data");
+        return res.status(200).json({ data: data.data, message: "Lấy dữ liệu thành công" });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
 
-// Get sensor data
-app.post("/sensor", (req, res) => {
-    const data = req.body;
-    console.log(data);
+// update sensor data
+app.post("/sensor", async (req, res) => {
+    const { temperature, humidity, ldr, rain_state } = req.body;
+    const timestamp = new Date();
+    if (!temperature || !humidity || !ldr || !rain_state) {
+        return res.status(400).json({ message: "Missing data" });
+    }
+    try {
+        //get prev timestamp
+        const prevTimestampDoc = await Sensor.findOne({ name: "temperature" }).sort({ timestame: -1 }).limit(1).select("timestame");
+        if (prevTimestampDoc) {
+            let prevTimestamp = prevTimestampDoc.timestame;
+            if (timestamp - prevTimestamp < 30000) {
+                io.emit("sensor", { message: "Dữ liệu được cập nhật.", data: { temperature, humidity, ldr, rain_state } });
+                return res.status(200).json({ message: "Dữ liệu đã được gửi đi" });
+            }
+        }
+
+        // Add data for temperature
+        await Sensor.updateOne({ name: "temperature" }, { $push: { data: { total: temperature, timestame: timestamp } } }, { upsert: true });
+
+        // Add data for humidity
+        await Sensor.updateOne({ name: "humidity" }, { $push: { data: { total: humidity, timestame: timestamp } } }, { upsert: true });
+
+        // Add data for ldr
+        await Sensor.updateOne({ name: "ldr" }, { $push: { data: { total: ldr, timestame: timestamp } } }, { upsert: true });
+
+        // Add data for rain
+        await Sensor.updateOne({ name: "rain" }, { $push: { data: { total: rain_state, timestame: timestamp } } }, { upsert: true });
+
+        io.emit("sensor", { message: "Dữ liệu được cập nhật.", data: { temperature, humidity, ldr, rain_state } });
+        return res.status(200).json({ message: "Sensor data added successfully!" });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
 });
 
 // connect to socket
@@ -99,9 +221,5 @@ io.on("connection", (socket) => {
     console.log("a user connected");
     socket.on("disconnect", () => {
         console.log("user disconnected");
-    });
-
-    socket.on("control", (msg) => {
-        console.log("message: " + msg);
     });
 });
