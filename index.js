@@ -105,7 +105,7 @@ app.post("/control", (req, res) => {
                 message: "Updated successfully",
                 data: { [device]: state },
             });
-            io.emit(`control-${device}`, { [device]: state });
+            io.emit(`control-${device}`, state);
         })
         .catch((err) => {
             res.status(500).json({ error: err.message });
