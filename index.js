@@ -13,6 +13,7 @@ const io = new Server(server, {
 });
 
 app.use(cors());
+app.use(boradyParser.urlencoded({ extended: true }));
 app.use(boradyParser.json());
 
 // Connect to MongoDB
@@ -95,7 +96,6 @@ app.get("/control", async (req, res) => {
 // Update state control device
 app.post("/control", (req, res) => {
     let { device, state } = req.body;
-    state = state === "true" || state === true || state == 1 ? true : false;
     console.log(`Received [${device}] : [${state}]`);
     DeviceModal.updateOne({ $set: { [device]: state } })
         .then((data) => {
