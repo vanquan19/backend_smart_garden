@@ -182,6 +182,8 @@ app.get("/ldr", async (req, res) => {
 // update sensor data
 app.post("/sensor", async (req, res) => {
     const { temperature, humidity, ldr, rain_state } = req.body;
+    console.log(req.body);
+
     const timestamp = new Date();
     if (!temperature || !humidity || !ldr || !rain_state) {
         return res.status(400).json({ message: "Missing data" });
