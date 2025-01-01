@@ -1,10 +1,11 @@
 const app = require("express")();
-const { createServer } = require("node:http");
+const http = require("http");
 const cors = require("cors");
+const boradyParser = require("body-parser");
 const mongoose = require("mongoose");
 const { Server } = require("socket.io");
 
-const server = createServer(app);
+const server = http.createServer(app);
 const io = new Server(server, {
     cors: {
         origin: "*",
@@ -12,6 +13,7 @@ const io = new Server(server, {
 });
 
 app.use(cors());
+app.use(boradyParser.json());
 
 // Connect to MongoDB
 const connectDB = async () => {
@@ -50,12 +52,36 @@ const sensorSchema = new mongoose.Schema(
 // Create model device and sensor
 const DeviceModal = mongoose.model("coltrol", deviceSchema);
 const Sensor = mongoose.model("sensor", sensorSchema);
+//
+app.get("/", (req, res) => {
+    res.status(200).json("Hello World");
+});
 
 // Get state control device
 app.get("/control", (req, res) => {
-    Device.find({})
+    const { devide } = req.query;
+    const objFind = {};
+    DeviceModal.find(objFind)
         .then((data) => {
             res.status(200).json(data);
+        })
+        .catch((err) => {
+            res.status(500).json({ error: err.message });
+        });
+});
+
+// Update state control device
+app.post("/control", (req, res) => {
+    const { device, state } = req.body;
+    console.log(`Received [${device}] : [${state}]`);
+    DeviceModal.updateOne({ $set: { [device]: state } })
+        .then((data) => {
+            console.log(`Updated [${device}] : [${state}]`);
+            res.status(200).json({
+                message: "Updated successfully",
+                data: { [device]: state },
+            });
+            io.emit("control", { [device]: state });
         })
         .catch((err) => {
             res.status(500).json({ error: err.message });
@@ -69,11 +95,7 @@ io.on("connection", (socket) => {
         console.log("user disconnected");
     });
 
-    // Send to the connected user
-    socket.emit("event", { message: "Connected !!!!" });
-
-    // On each "status", run this function
-    socket.on("status", function (data) {
-        console.log(data);
+    socket.on("control", (msg) => {
+        console.log("message: " + msg);
     });
 });
