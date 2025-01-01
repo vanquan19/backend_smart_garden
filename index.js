@@ -94,7 +94,8 @@ app.get("/control", async (req, res) => {
 
 // Update state control device
 app.post("/control", (req, res) => {
-    const { device, state } = req.body;
+    let { device, state } = req.body;
+    state = state === "true" || state === true || state == 1 ? true : false;
     console.log(`Received [${device}] : [${state}]`);
     DeviceModal.updateOne({ $set: { [device]: state } })
         .then((data) => {
@@ -103,7 +104,7 @@ app.post("/control", (req, res) => {
                 message: "Updated successfully",
                 data: { [device]: state },
             });
-            io.emit("control", { [device]: state });
+            io.emit(`control-${device}`, { [device]: state });
         })
         .catch((err) => {
             res.status(500).json({ error: err.message });
