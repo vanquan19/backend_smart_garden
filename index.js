@@ -182,10 +182,9 @@ app.get("/ldr", async (req, res) => {
 // update sensor data
 app.post("/sensor", async (req, res) => {
     const { temperature, humidity, ldr, rain_state } = req.body;
-    console.log(req.body);
 
     const timestamp = new Date();
-    if (!temperature || !humidity || !ldr || !rain_state) {
+    if (!temperature || !humidity || !ldr || rain_state === undefined) {
         return res.status(400).json({ message: "Missing data" });
     }
     try {
@@ -209,9 +208,9 @@ app.post("/sensor", async (req, res) => {
         await Sensor.updateOne({ name: "ldr" }, { $push: { data: { total: ldr, timestame: timestamp } } }, { upsert: true });
 
         // Add data for rain
-        await Sensor.updateOne({ name: "rain" }, { $push: { data: { total: rain_state, timestame: timestamp } } }, { upsert: true });
+        await Sensor.updateOne({ name: "rain" }, { $push: { data: { total: !!rain_state, timestame: timestamp } } }, { upsert: true });
 
-        io.emit("sensor", { message: "Dữ liệu được cập nhật.", data: { temperature, humidity, ldr, rain_state } });
+        io.emit("sensor", { message: "Dữ liệu được cập nhật.", data: { temperature, humidity, ldr, rain_state: !!rain_state } });
         return res.status(200).json({ message: "Sensor data added successfully!" });
     } catch (err) {
         return res.status(500).json({ message: err.message });
