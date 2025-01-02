@@ -224,4 +224,8 @@ io.on("connection", (socket) => {
     socket.on("disconnect", () => {
         console.log("user disconnected");
     });
+
+    socket.on("control-light", (data) => {
+        console.log(data);
+    });
 });
