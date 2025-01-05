@@ -217,6 +217,18 @@ app.post("/sensor", async (req, res) => {
     }
 });
 
+app.get("/sensors", async (req, res) => {
+    try {
+        const temperature = await Sensor.findOne({ name: "temperature" }).select("data");
+        const humidity = await Sensor.findOne({ name: "humidity" }).select("data");
+        const ldr = await Sensor.findOne({ name: "ldr" }).select("data");
+
+        return res.status(200).json({ temperature: temperature.data.slice(-1)[0], humidity: humidity.data.slice(-1)[0], ldr: ldr.data.slice(-1)[0] });
+    } catch (err) {
+        return res.status(500).json({ message: err.message });
+    }
+});
+
 // connect to socket
 io.on("connection", (socket) => {
     console.log("a user connected");
