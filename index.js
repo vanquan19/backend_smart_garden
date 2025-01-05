@@ -190,7 +190,7 @@ app.post("/sensor", async (req, res) => {
     }
     try {
         //get prev timestamp
-        const prevTimestampDoc = await Sensor.findOne({ name: "temperature" }, { data: { $slice: -1 } })[0].timestame;
+        const prevTimestampDoc = await Sensor.findOne({ name: "temperature" }, { data: { $slice: -1 } })[0].data[0].timestame;
         if (prevTimestampDoc) {
             console.log(prevTimestampDoc);
 
@@ -199,18 +199,6 @@ app.post("/sensor", async (req, res) => {
             if (diffInms < 30 * 60 * 1000) {
                 io.emit("sensor-temp", { message: "Dữ liệu được gửi đi.", data: { temperature, humidity, ldr } });
                 return res.status(200).json({ message: "Dữ liệu đã được gửi đi" });
-            } else {
-                // Add data for temperature
-                await Sensor.updateOne({ name: "temperature" }, { $push: { data: { total: temperature, timestame: timestamp } } }, { upsert: true });
-
-                // Add data for humidity
-                await Sensor.updateOne({ name: "humidity" }, { $push: { data: { total: humidity, timestame: timestamp } } }, { upsert: true });
-
-                // Add data for ldr
-                await Sensor.updateOne({ name: "ldr" }, { $push: { data: { total: ldr, timestame: timestamp } } }, { upsert: true });
-
-                io.emit("sensor", { message: "Dữ liệu đã được cập nhật.", data: { temperature, humidity, ldr } });
-                return res.status(200).json({ message: "Dữ liệu đã được cập nhật vào db." });
             }
         }
 
