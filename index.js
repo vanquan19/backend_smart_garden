@@ -182,10 +182,10 @@ app.get("/ldr", async (req, res) => {
 
 // update sensor data
 app.post("/sensor", async (req, res) => {
-    const { temperature, humidity, ldr, rain_state } = req.body;
+    const { temperature, humidity, ldr } = req.body;
 
     const timestamp = new Date();
-    if (!temperature || !humidity || !ldr || rain_state === undefined) {
+    if (!temperature || !humidity || !ldr) {
         return res.status(400).json({ message: "Missing data" });
     }
     try {
@@ -194,7 +194,7 @@ app.post("/sensor", async (req, res) => {
         if (prevTimestampDoc) {
             let prevTimestamp = prevTimestampDoc.timestame;
             if (timestamp - prevTimestamp < 30000) {
-                io.emit("sensor", { message: "Dữ liệu được cập nhật.", data: { temperature, humidity, ldr, rain_state } });
+                io.emit("sensor-temp", { message: "Dữ liệu được gửi đi.", data: { temperature, humidity, ldr } });
                 return res.status(200).json({ message: "Dữ liệu đã được gửi đi" });
             }
         }
@@ -208,11 +208,8 @@ app.post("/sensor", async (req, res) => {
         // Add data for ldr
         await Sensor.updateOne({ name: "ldr" }, { $push: { data: { total: ldr, timestame: timestamp } } }, { upsert: true });
 
-        // Add data for rain
-        await Sensor.updateOne({ name: "rain" }, { $push: { data: { total: !!rain_state, timestame: timestamp } } }, { upsert: true });
-
-        io.emit("sensor", { message: "Dữ liệu được cập nhật.", data: { temperature, humidity, ldr, rain_state: !!rain_state } });
-        return res.status(200).json({ message: "Sensor data added successfully!" });
+        io.emit("sensor", { message: "Dữ liệu đã được cập nhật.", data: { temperature, humidity, ldr } });
+        return res.status(200).json({ message: "Dữ liệu đã được cập nhật vào db." });
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
@@ -223,9 +220,5 @@ io.on("connection", (socket) => {
     console.log("a user connected");
     socket.on("disconnect", () => {
         console.log("user disconnected");
-    });
-
-    socket.on("control-light", (data) => {
-        console.log(data);
     });
 });
