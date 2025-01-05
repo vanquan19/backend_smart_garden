@@ -192,24 +192,25 @@ app.post("/sensor", async (req, res) => {
         //get prev timestamp
         const prevTimestampDoc = await Sensor.findOne({ name: "temperature" }).sort({ timestame: -1 }).limit(1).select("timestame");
         if (prevTimestampDoc) {
-            let prevTimestamp = prevTimestampDoc.timestame;
-            if (timestamp - prevTimestamp < 30000) {
+            let prevTimestamp = new Date(prevTimestampDoc.timestame);
+            const diffInms = timestamp - prevTimestamp;
+            if (diffInms < 30 * 60 * 1000) {
                 io.emit("sensor-temp", { message: "Dữ liệu được gửi đi.", data: { temperature, humidity, ldr } });
                 return res.status(200).json({ message: "Dữ liệu đã được gửi đi" });
-            } else {
-                // Add data for temperature
-                await Sensor.updateOne({ name: "temperature" }, { $push: { data: { total: temperature, timestame: timestamp } } }, { upsert: true });
-
-                // Add data for humidity
-                await Sensor.updateOne({ name: "humidity" }, { $push: { data: { total: humidity, timestame: timestamp } } }, { upsert: true });
-
-                // Add data for ldr
-                await Sensor.updateOne({ name: "ldr" }, { $push: { data: { total: ldr, timestame: timestamp } } }, { upsert: true });
-
-                io.emit("sensor", { message: "Dữ liệu đã được cập nhật.", data: { temperature, humidity, ldr } });
-                return res.status(200).json({ message: "Dữ liệu đã được cập nhật vào db." });
             }
         }
+
+        // Add data for temperature
+        await Sensor.updateOne({ name: "temperature" }, { $push: { data: { total: temperature, timestame: timestamp } } }, { upsert: true });
+
+        // Add data for humidity
+        await Sensor.updateOne({ name: "humidity" }, { $push: { data: { total: humidity, timestame: timestamp } } }, { upsert: true });
+
+        // Add data for ldr
+        await Sensor.updateOne({ name: "ldr" }, { $push: { data: { total: ldr, timestame: timestamp } } }, { upsert: true });
+
+        io.emit("sensor", { message: "Dữ liệu đã được cập nhật.", data: { temperature, humidity, ldr } });
+        return res.status(200).json({ message: "Dữ liệu đã được cập nhật vào db." });
     } catch (err) {
         return res.status(500).json({ message: err.message });
     }
