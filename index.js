@@ -193,9 +193,7 @@ app.post("/sensor", async (req, res) => {
         let prevTimestampDoc = await Sensor.findOne({ name: "temperature" });
         prevTimestampDoc = prevTimestampDoc.data.slice(-1)[0].timestame;
         if (prevTimestampDoc) {
-            console.log(prevTimestampDoc);
-
-            let prevTimestamp = new Date(timestame);
+            let prevTimestamp = new Date(prevTimestampDoc);
             const diffInms = timestamp - prevTimestamp;
             if (diffInms < 30 * 60 * 1000) {
                 io.emit("sensor-temp", { message: "Dữ liệu được gửi đi.", data: { temperature, humidity, ldr } });
