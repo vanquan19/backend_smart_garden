@@ -190,7 +190,8 @@ app.post("/sensor", async (req, res) => {
     }
     try {
         //get prev timestamp
-        const prevTimestampDoc = await Sensor.findOne({ name: "temperature" }, { data: { $slice: -1 } });
+        let prevTimestampDoc = await Sensor.findOne({ name: "temperature" });
+        prevTimestampDoc = prevTimestampDoc.data.slice(-1)[0].timestame;
         if (prevTimestampDoc) {
             console.log(prevTimestampDoc);
 
