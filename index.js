@@ -95,7 +95,7 @@ app.get("/control", async (req, res) => {
 
 // Update state control device
 app.post("/control", (req, res) => {
-    let { device, state } = req.body;
+    let { device, state, from = "esp32" } = req.body;
     console.log(`Received [${device}] : [${state}]`);
     DeviceModal.updateOne({ $set: { [device]: state } })
         .then((data) => {
@@ -104,7 +104,7 @@ app.post("/control", (req, res) => {
                 message: "Updated successfully",
                 data: { [device]: state },
             });
-            io.emit(`control-${device}`, state);
+            io.emit(`control-${device}-${from}`, state);
         })
         .catch((err) => {
             res.status(500).json({ error: err.message });
