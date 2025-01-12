@@ -39,6 +39,9 @@ const deviceSchema = new mongoose.Schema(
         auto: Boolean,
         watering: Boolean,
         heating: Boolean,
+        ldrPoint: Number,
+        temperaturePoint: Number,
+        humidityPoint: Number,
     },
     { collection: "controls" }
 );
